@@ -2,9 +2,11 @@ use futures::{stream::SelectAll, Stream, StreamExt};
 pub use k8s_openapi::api::core::v1::{Pod, Service};
 use kube::{
     api::{ListParams, LogParams},
+    config::Kubeconfig,
     Api, Client, Config, ResourceExt,
 };
 
+#[cfg(not(feature = "mock"))]
 pub async fn list_svc(namespace: &str) -> Result<Vec<Service>, String> {
     let client = Client::try_default().await.map_err(|e| e.to_string())?;
     let api: Api<Service> = Api::namespaced(client, namespace);
@@ -19,6 +21,19 @@ pub async fn list_svc(namespace: &str) -> Result<Vec<Service>, String> {
     Ok(res)
 }
 
+#[cfg(not(feature = "mock"))]
+pub fn list_ctx() -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    let ctxs = Kubeconfig::read()?
+        .contexts
+        .into_iter()
+        .map(|x| x.name)
+        .filter(|x| x.starts_with("betty-"))
+        .collect();
+
+    Ok(ctxs)
+}
+
+#[cfg(not(feature = "mock"))]
 pub async fn logger(
     ctx: &str,
     namespace: &str,
@@ -31,23 +46,10 @@ pub async fn logger(
     .await
     .map_err(|e| e.to_string())?;
 
-    // let config = Config::infer().await?;
     let client = Client::try_from(config).map_err(|e| e.to_string())?;
-
-    // dbg!(&client.apiserver_version().await);
-
     let pods: Api<Pod> = Api::namespaced(client, namespace);
     let mut app_pods = Vec::new();
     for p in pods
-        // .list(&old_select_way(app))
-        // .await
-        // .map_err(|e| e.to_string())?
-        // .into_iter()
-        // .chain(
-        //     pods.list(&new_select_way(app))
-        //         .await
-        //         .map_err(|e| e.to_string())?,
-        // )
         .list(&selector(&app))
         .await
         .map_err(|e| e.to_string())?
@@ -87,14 +89,6 @@ fn unify(res: Result<String, String>) -> String {
     }
 }
 
-// fn new_select_way(app: &str) -> ListParams {
-//     ListParams::default().labels(&format!("app.kubernetes.io/name={app}"))
-// }
-
-// fn old_select_way(app: &str) -> ListParams {
-//     ListParams::default().labels(&format!("app={app}"))
-// }
-
 fn selector(app: &Service) -> ListParams {
     if let Some(selector) = app.spec.as_ref().map(|x| x.selector.as_ref()).flatten() {
         let labels: Vec<String> = selector
@@ -105,4 +99,39 @@ fn selector(app: &Service) -> ListParams {
     } else {
         ListParams::default()
     }
+}
+
+#[cfg(feature = "mock")]
+pub async fn list_svc(namespace: &str) -> Result<Vec<Service>, String> {
+    Ok(vec![
+        generate_service("one"),
+        generate_service("two"),
+        generate_service("three"),
+        generate_service("four"),
+        generate_service("five"),
+    ])
+}
+
+#[cfg(feature = "mock")]
+fn generate_service(name: &str) -> Service {
+    let mut service = Service::default();
+    service.metadata.name = Some(name.to_string());
+
+    service
+}
+
+#[cfg(feature = "mock")]
+pub fn list_ctx() -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    Ok((0..10).map(|x| format!("ctx: {x}")).collect())
+}
+
+#[cfg(feature = "mock")]
+pub async fn logger(
+    ctx: &str,
+    namespace: &str,
+    app: Service,
+) -> Result<impl Stream<Item = String>, String> {
+    Ok(futures::stream::iter(
+        (0..30).map(|x| format!("logging: {x}")),
+    ))
 }
