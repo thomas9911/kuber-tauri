@@ -7,9 +7,11 @@
     fetchContexts,
     fetchServices,
     getCtx,
+    logMessages,
     setCtx,
     setSvc,
   } from "./tauri";
+  import { subscribe } from "svelte/internal";
 
   let ctxs = [];
   let svcs = [];
@@ -19,7 +21,7 @@
   let messages: Array<string> = [];
   let logElement: HTMLDivElement;
 
-  async function logMessages() {
+  async function subscribeToLogs() {
     // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
     selectedCtx = await getCtx();
     messages = [];
@@ -48,7 +50,7 @@
     console.log({ selectedSvc });
   }
 
-  const scrollToBottom = async (node) => {
+  const scrollToBottom = async (node: HTMLDivElement) => {
     node.scroll({ top: node.scrollHeight, behavior: "smooth" });
   };
 
@@ -81,7 +83,7 @@
   </div>
 
   <div class="row">
-    <button on:click={logMessages}> Log messages </button>
+    <button on:click={subscribeToLogs}> Log messages </button>
   </div>
   <div class="row">
     <code>{selectedCtx}</code>
