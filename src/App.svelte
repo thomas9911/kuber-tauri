@@ -1,11 +1,11 @@
 <script lang="ts">
-  import Greet from "./lib/Greet.svelte";
+  import Logger from "./lib/Logger.svelte";
 </script>
 
 <main class="container">
   <h1>Welcome to Tauri!</h1>
 
   <div class="row">
-    <Greet />
+    <Logger />
   </div>
 </main>
