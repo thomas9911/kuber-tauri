@@ -12,12 +12,20 @@
   let selectedSvc = "";
   let messages: string[] = [];
   let logElement: HTMLDivElement;
-  console.log("init");
 
   export async function onMountHandle() {
-    console.log("mounting");
     ctxs = await backend.fetchContexts();
     svcs = await backend.fetchServices();
+  }
+
+  export function introspectState() {
+    return {
+      ctxs,
+      svcs,
+      selectedCtx,
+      selectedSvc,
+      messages,
+    };
   }
 
   async function subscribeToLogs() {
