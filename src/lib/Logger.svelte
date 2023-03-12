@@ -2,30 +2,29 @@
   import { onMount } from "svelte";
   import { emit, listen } from "@tauri-apps/api/event";
   import type { Event } from "@tauri-apps/api/event";
-  import {
-    cancelMessages,
-    fetchContexts,
-    fetchServices,
-    getCtx,
-    logMessages,
-    setCtx,
-    setSvc,
-  } from "./tauri";
-  import { subscribe } from "svelte/internal";
+  import type { TauriBackend } from "./tauri";
 
+  export let backend: TauriBackend;
   let ctxs = [];
   let svcs = [];
 
   let selectedCtx = "";
   let selectedSvc = "";
-  let messages: Array<string> = [];
+  let messages: string[] = [];
   let logElement: HTMLDivElement;
+  console.log("init");
+
+  export async function onMountHandle() {
+    console.log("mounting");
+    ctxs = await backend.fetchContexts();
+    svcs = await backend.fetchServices();
+  }
 
   async function subscribeToLogs() {
     // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-    selectedCtx = await getCtx();
+    selectedCtx = await backend.getCtx();
     messages = [];
-    await logMessages();
+    await backend.logMessages();
     const unlisten = await listen("onMessage", (event: Event<string>) => {
       // event.event is the event name (useful if you want to use a single callback fn for multiple event types)
       // event.payload is the payload object
@@ -41,29 +40,36 @@
   }
 
   async function handleCtxChange() {
-    await setCtx(selectedCtx);
+    await backend.cancelMessages();
+    await backend.setCtx(selectedCtx);
     console.log({ selectedCtx });
   }
 
   async function handleSvcChange() {
-    await setSvc(selectedSvc);
+    await backend.cancelMessages();
+    await backend.setSvc(selectedSvc);
     console.log({ selectedSvc });
+  }
+
+  function clearMessages() {
+    messages = [];
   }
 
   const scrollToBottom = async (node: HTMLDivElement) => {
     node.scroll({ top: node.scrollHeight, behavior: "smooth" });
   };
 
-  onMount(async () => {
-    ctxs = await fetchContexts();
-    svcs = await fetchServices();
-  });
+  onMount(onMountHandle);
 </script>
 
 <div>
   <div class="row">
     <form on:change|preventDefault={handleCtxChange}>
-      <select bind:value={selectedCtx} on:change={() => {}}>
+      <select
+        bind:value={selectedCtx}
+        on:change={() => {}}
+        data-testid="logger-ctx"
+      >
         {#each ctxs as ctx}
           <option value={ctx}>
             {ctx}
@@ -72,7 +78,11 @@
       </select>
     </form>
     <form on:change|preventDefault={handleSvcChange}>
-      <select bind:value={selectedSvc} on:change={() => {}}>
+      <select
+        bind:value={selectedSvc}
+        on:change={() => {}}
+        data-testid="logger-svc"
+      >
         {#each svcs as svc}
           <option value={svc}>
             {svc}
@@ -99,7 +109,7 @@
     {/each}
   </div>
   <div class="row">
-    <button on:click={() => (messages = [])}> Clear messages </button>
-    <button on:click={cancelMessages}> Cancel messages </button>
+    <button on:click={clearMessages}> Clear messages </button>
+    <button on:click={backend.cancelMessages}> Cancel messages </button>
   </div>
 </div>

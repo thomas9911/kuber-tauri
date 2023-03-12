@@ -4,30 +4,42 @@ import { invoke } from "@tauri-apps/api/tauri";
  * Wrapper for tauri invoke functions
  */
 
-export const setSvc = async (selectedSvc: string): Promise<void> => {
-  await invoke("set_svc", { svc: selectedSvc });
-};
+export abstract class TauriBackend {
+  setSvc: (selectedSvc: string) => Promise<void>;
+  setCtx: (selectedCtx: string) => Promise<void>;
+  getCtx: () => Promise<string>;
+  cancelMessages: () => Promise<void>;
+  fetchContexts: () => Promise<string[]>;
+  fetchServices: () => Promise<string[]>;
+  logMessages: () => Promise<void>;
+}
 
-export const setCtx = async (selectedCtx: string): Promise<void> => {
-  await invoke("set_ctx", { ctx: selectedCtx });
-};
+export class Tauri extends TauriBackend {
+  static async setSvc(selectedSvc: string): Promise<void> {
+    await invoke("set_svc", { svc: selectedSvc });
+  }
 
-export const getCtx = async (): Promise<string> => {
-  return invoke("get_ctx", {});
-};
+  static async setCtx(selectedCtx: string): Promise<void> {
+    await invoke("set_ctx", { ctx: selectedCtx });
+  }
 
-export const cancelMessages = async (): Promise<void> => {
-  await invoke("cancel_messages", {});
-};
+  static async getCtx(): Promise<string> {
+    return invoke("get_ctx", {});
+  }
 
-export const fetchContexts = async (): Promise<Array<string>> => {
-  return invoke("fetch_contexts", {});
-};
+  static async cancelMessages(): Promise<void> {
+    await invoke("cancel_messages", {});
+  }
 
-export const fetchServices = async (): Promise<Array<string>> => {
-  return invoke("fetch_services", {});
-};
+  static async fetchContexts(): Promise<Array<string>> {
+    return invoke("fetch_contexts", {});
+  }
 
-export const logMessages = async (): Promise<void> => {
-  await invoke("log_messages", {});
-};
+  static async fetchServices(): Promise<Array<string>> {
+    return invoke("fetch_services", {});
+  }
+
+  static async logMessages(): Promise<void> {
+    await invoke("log_messages", {});
+  }
+}
